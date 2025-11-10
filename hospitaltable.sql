@@ -37,6 +37,20 @@ CREATE TABLE Admission (
   CONSTRAINT fk_adm_doctor  FOREIGN KEY (doctor_id)  REFERENCES Doctors(doctor_id)
 );
 
+DROP TABLE IF EXISTS Bed;
+CREATE TABLE Bed (
+  bed_id INT NOT NULL AUTO_INCREMENT,
+  room_no VARCHAR(10) NOT NULL,
+  bed_number VARCHAR(5) NOT NULL,
+  bed_type ENUM('Standard', 'ICU', 'Emergency', 'Recovery') NOT NULL,
+  status ENUM('Available', 'Occupied', 'Under Maintenance') DEFAULT 'Available',
+  patient_id INT NULL,
+  admission_id INT NULL,
+  PRIMARY KEY (bed_id),
+  CONSTRAINT fk_bed_patient FOREIGN KEY (patient_id) REFERENCES Patients(patient_id),
+  CONSTRAINT fk_bed_admission FOREIGN KEY (admission_id) REFERENCES Admission(admission_id)
+);
+
 INSERT INTO Patients (first_name, last_name, date_of_birth, gender, phone, email)
 VALUES('Alice', 'Johnson', '1985-04-12', 'Female', '(555) 123-4567', 'alice.j@example.com'),
 ('Roberto', 'Chen', '1972-11-20', 'Male', '(555) 987-6543', 'roberto.c@example.com'),
@@ -73,3 +87,16 @@ INSERT INTO Admission (patient_id, doctor_id, room_no, admission_date, discharge
 (7, 2, 'P113',   '2025-11-01', '2025-11-03', 'Severe flu and dehydration'),
 (4, 8, 'B312',   '2025-10-25', '2025-11-05', 'Appendectomy recovery'),
 (9,10, 'N107',   '2025-11-05', NULL, 'Migraine evaluation');
+
+INSERT INTO Bed (room_no, bed_number, bed_type, status, patient_id, admission_id) VALUES
+('A203', '1', 'Standard', 'Occupied', 1, 2),
+('ICU-05', '2', 'ICU', 'Available', NULL, NULL),
+('B112', '1', 'Standard', 'Occupied', 4, 3),
+('A110', '2', 'Recovery', 'Available', NULL, NULL),
+('C110', '1', 'Emergency', 'Under Maintenance', NULL, NULL),
+('A101', '1', 'Standard', 'Occupied', 4, NULL),
+('ER-02', '1', 'Emergency', 'Available', NULL, NULL),
+('C204', '2', 'Standard', 'Available', NULL, NULL),
+('P113', '1', 'Standard', 'Occupied', 7, 9),
+('B312', '1', 'Recovery', 'Available', NULL, NULL);
+
