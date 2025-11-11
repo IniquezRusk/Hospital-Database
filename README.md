@@ -17,4 +17,4 @@ Authors:
   - Jalen Grills
   - Talha Khalid
   - Caleb Allen
-  - Adewole Heavens
+  - Adewole Karunwi
