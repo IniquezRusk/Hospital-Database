@@ -1,0 +1,80 @@
+List all currently admitted patients with their doctor and branch name
+SELECT 
+    p.name AS PatientName,
+    d.name AS DoctorName,
+    b.branch_name AS BranchName,
+    a.admission_date,
+    a.diagnosis
+FROM Admission a
+JOIN Patient p ON a.patient_id = p.patient_id
+JOIN Doctor d ON a.doctor_id = d.doctor_id
+JOIN Branch b ON a.branch_id = b.branch_id
+WHERE a.status = 'Admitted';
+
+Count how many patients are admitted per branch
+SELECT 
+    b.branch_name,
+    COUNT(a.admission_id) AS Total_Admitted
+FROM Branch b
+LEFT JOIN Admission a ON b.branch_id = a.branch_id AND a.status = 'Admitted'
+GROUP BY b.branch_name
+ORDER BY Total_Admitted DESC;
+
+Show all “High” or “Critical” priority patients and the bed type they are using
+SELECT 
+    p.name AS PatientName,
+    p.priority_level,
+    b.bed_type,
+    br.branch_name
+FROM Admission a
+JOIN Patient p ON a.patient_id = p.patient_id
+JOIN Bed b ON a.bed_id = b.bed_id
+JOIN Branch br ON a.branch_id = br.branch_id
+WHERE p.priority_level IN ('High', 'Critical');
+
+Find doctors and the number of patients they are currently attending
+SELECT 
+    d.name AS DoctorName,
+    br.branch_name,
+    COUNT(a.admission_id) AS CurrentPatients
+FROM Doctor d
+JOIN Admission a ON d.doctor_id = a.doctor_id
+JOIN Branch br ON d.branch_id = br.branch_id
+WHERE a.status = 'Admitted'
+GROUP BY d.name, br.branch_name
+ORDER BY CurrentPatients DESC;
+
+List patients who have been discharged, including their admission duration
+SELECT 
+    p.name AS PatientName,
+    b.branch_name,
+    DATEDIFF(a.discharge_date, a.admission_date) AS StayDurationDays
+FROM Admission a
+JOIN Patient p ON a.patient_id = p.patient_id
+JOIN Branch b ON a.branch_id = b.branch_id
+WHERE a.status = 'Discharged'
+ORDER BY StayDurationDays DESC;
+
+Show all available beds per branch with type and location
+SELECT 
+    br.branch_name,
+    b.room_no,
+    b.bed_number,
+    b.bed_type
+FROM Bed b
+JOIN Branch br ON b.branch_id = br.branch_id
+WHERE b.status = 'Available'
+ORDER BY br.branch_name, b.room_no;
+
+Identify branches operating near or over capacity
+SELECT 
+    br.branch_name,
+    br.capacity,
+    COUNT(a.admission_id) AS CurrentOccupancy,
+    (br.capacity - COUNT(a.admission_id)) AS RemainingBeds
+FROM Branch br
+LEFT JOIN Admission a 
+    ON br.branch_id = a.branch_id AND a.status = 'Admitted'
+GROUP BY br.branch_id
+HAVING RemainingBeds <= 5
+ORDER BY RemainingBeds ASC;
