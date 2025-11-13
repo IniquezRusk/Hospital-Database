@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hospital Database Queries</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        select {
+            font-size: 16px;
+            padding: 8px;
+            width: 400px;
+        }
+        .go-button {
+            margin-top: 10px;
+            padding: 8px 12px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .go-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hospital Database Queries</h1>
+    <p>Select a query from the list below and click "Run Query":</p>
+
+    <form id="queryForm" method="get" action="queries.php">
+        <select name="query" required>
+            <option value="">-- Select a Query --</option>
+            <option value="1">1️⃣ Scheduled Appointments (Patient + Doctor + Department)</option>
+            <option value="2">2️⃣ Total Appointments per Department</option>
+            <option value="3">3️⃣ High or Critical Priority Patients</option>
+            <option value="4">4️⃣ Doctors and Current Scheduled Patients</option>
+            <option value="5">5️⃣ Completed Appointments and Wait Time</option>
+            <option value="6">6️⃣ Available Doctors by Department</option>
+            <option value="7">7️⃣ Departments with More Than 5 Scheduled Appointments</option>
+        </select>
+        <br>
+        <button type="submit" class="go-button">Run Query</button>
+    </form>
+</body>
+</html>
+
