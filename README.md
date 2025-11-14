@@ -8,8 +8,10 @@ The project has 5 tables, patients, doctors, admissions, beds, and the departmen
 Creation date: 11/8/2025
 
 File names:
-  - readme.txt
+  - readme.md
   - hospitaldatabase.sql
+  - Queries
+  - HospitalAdmissions.sql
     
 Authors:
   - Iniquez Rusk
