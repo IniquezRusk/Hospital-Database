@@ -2,54 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hospital Database Queries</title>
+    <title>Hospital Admissions Dashboard</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f9f9f9;
+            background: #f4f4f4;
+            padding: 20px;
         }
         h1 {
             color: #2c3e50;
         }
-        select {
-            font-size: 16px;
-            padding: 8px;
-            width: 400px;
+        .button-container {
+            margin-top: 20px;
         }
-        .go-button {
-            margin-top: 10px;
-            padding: 8px 12px;
-            font-size: 16px;
-            background-color: #3498db;
+        .btn {
+            display: block;
+            width: 350px;
+            padding: 12px;
+            margin: 10px 0;
+            background: #3498db;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            border-radius: 6px;
+            font-size: 16px;
         }
-        .go-button:hover {
-            background-color: #2980b9;
+        .btn:hover {
+            background: #2980b9;
         }
     </style>
 </head>
 <body>
-    <h1>Hospital Database Queries</h1>
-    <p>Select a query from the list below and click "Run Query":</p>
 
-    <form id="queryForm" method="get" action="queries.php">
-        <select name="query" required>
-            <option value="">-- Select a Query --</option>
-            <option value="1">1️⃣ Scheduled Appointments (Patient + Doctor + Department)</option>
-            <option value="2">2️⃣ Total Appointments per Department</option>
-            <option value="3">3️⃣ High or Critical Priority Patients</option>
-            <option value="4">4️⃣ Doctors and Current Scheduled Patients</option>
-            <option value="5">5️⃣ Completed Appointments and Wait Time</option>
-            <option value="6">6️⃣ Available Doctors by Department</option>
-            <option value="7">7️⃣ Departments with More Than 5 Scheduled Appointments</option>
-        </select>
-        <br>
-        <button type="submit" class="go-button">Run Query</button>
-    </form>
+<h1>Hospital Admissions Database</h1>
+<p>Select a report below:</p>
+
+<div class="button-container">
+
+    <!-- QUERY 1 -->
+    <a href="queries.php?query=1" class="btn">
+        1️⃣ Current Admissions (Patient + Doctor + Bed + Branch)
+    </a>
+
+    <!-- QUERY 2 -->
+    <a href="queries.php?query=2" class="btn">
+        2️⃣ Branch Capacity (Total vs Occupied vs Available)
+    </a>
+
+    <!-- QUERY 3 -->
+    <a href="queries.php?query=3" class="btn">
+        3️⃣ High or Critical Patients (with Assigned Beds)
+    </a>
+
+    <!-- QUERY 4 -->
+    <a href="queries.php?query=4" class="btn">
+        4️⃣ Doctors and Their Current Admitted Patients
+    </a>
+
+    <!-- QUERY 5 -->
+    <a href="queries.php?query=5" class="btn">
+        5️⃣ Bed Availability (All Branches)
+    </a>
+
+    <!-- QUERY 6 -->
+    <a href="queries.php?query=6" class="btn">
+        6️⃣ Available Beds by Branch (Using Stored Procedure)
+    </a>
+
+    <!-- QUERY 7 -->
+    <a href="queries.php?query=7" class="btn">
+        7️⃣ Branches With High Admission Load
+    </a>
+
+</div>
+
 </body>
 </html>
-
