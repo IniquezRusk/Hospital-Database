@@ -68,13 +68,16 @@ ORDER BY br.branch_name, b.room_no;
 
 Identify branches operating near or over capacity
 SELECT 
+    br.branch_id,
     br.branch_name,
     br.capacity,
-    COUNT(a.admission_id) AS CurrentOccupancy,
-    (br.capacity - COUNT(a.admission_id)) AS RemainingBeds
+    COUNT(a.admission_id) AS admitted_patients,
+    (br.capacity - COUNT(a.admission_id)) AS available_capacity,
+    ROUND(COUNT(a.admission_id) / br.capacity * 100, 1) AS occupancy_percent
 FROM Branch br
 LEFT JOIN Admission a 
-    ON br.branch_id = a.branch_id AND a.status = 'Admitted'
-GROUP BY br.branch_id
-HAVING RemainingBeds <= 5
-ORDER BY RemainingBeds ASC;
+       ON br.branch_id = a.branch_id 
+      AND a.status = 'Admitted'
+GROUP BY br.branch_id, br.branch_name, br.capacity
+ORDER BY occupancy_percent DESC;
+
