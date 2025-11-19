@@ -1,6 +1,6 @@
 -- ===================================
 -- HOSPITAL ADMISSIONS DATABASE SCRIPT
--- Clean Schema + Triggers + Procedures + Views (NO SAMPLE DATA)
+-- Clean Schema + Triggers + Procedures + Views + Users Table
 -- ===================================
 
 DROP DATABASE IF EXISTS HospitalAdmissions;
@@ -71,26 +71,22 @@ CREATE TABLE Admission (
 
 DELIMITER $$
 
--- 1. One active admission per patient
 DROP TRIGGER IF EXISTS tr_one_active_admission_per_patient$$
 CREATE TRIGGER tr_one_active_admission_per_patient
 BEFORE INSERT ON Admission
 FOR EACH ROW
 BEGIN
     DECLARE active_count INT;
-
     SELECT COUNT(*) INTO active_count
     FROM Admission
     WHERE patient_id = NEW.patient_id
       AND status = 'Admitted';
-
     IF active_count >= 1 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Patient already has an active admission.';
     END IF;
 END$$
 
--- 2. Branch capacity enforcement
 DROP TRIGGER IF EXISTS tr_branch_capacity$$
 CREATE TRIGGER tr_branch_capacity
 BEFORE INSERT ON Admission
@@ -113,7 +109,6 @@ BEGIN
     END IF;
 END$$
 
--- 3. Priority-level bed assignment
 DROP TRIGGER IF EXISTS tr_priority_bed_assignment$$
 CREATE TRIGGER tr_priority_bed_assignment
 BEFORE INSERT ON Admission
@@ -136,7 +131,6 @@ BEGIN
     END IF;
 END$$
 
--- 4. Bed must be available BEFORE assignment + auto-set to Occupied
 DROP TRIGGER IF EXISTS tr_bed_occupied$$
 CREATE TRIGGER tr_bed_occupied
 BEFORE INSERT ON Admission
@@ -160,7 +154,6 @@ BEGIN
     WHERE bed_id = NEW.bed_id;
 END$$
 
--- 5. Restore bed to Available after discharge
 DROP TRIGGER IF EXISTS tr_bed_available$$
 CREATE TRIGGER tr_bed_available
 AFTER UPDATE ON Admission
@@ -207,7 +200,6 @@ BEGIN
     SELECT priority_level INTO patient_priority 
     FROM Patient WHERE patient_id=p_patient_id;
 
-    -- Priority-based bed selection
     IF patient_priority IN ('High','Critical') THEN
         SELECT bed_id INTO bed_id_val
         FROM Bed
@@ -243,7 +235,6 @@ DELIMITER ;
 -- 4️⃣ VIEWS
 -- ===================================
 
--- Current admissions
 CREATE VIEW vw_current_admissions AS
 SELECT 
     a.admission_id,
@@ -264,7 +255,6 @@ JOIN Bed b ON a.bed_id = b.bed_id
 JOIN Branch br ON a.branch_id = br.branch_id
 WHERE a.status = 'Admitted';
 
--- Branch occupancy
 CREATE VIEW vw_branch_occupancy AS
 SELECT 
     br.branch_id,
@@ -280,7 +270,6 @@ LEFT JOIN Bed b ON br.branch_id = b.branch_id
 LEFT JOIN Admission a ON br.branch_id = a.branch_id
 GROUP BY br.branch_id, br.branch_name, br.capacity;
 
--- Available beds
 CREATE VIEW vw_available_beds AS
 SELECT 
     b.bed_id,
@@ -294,7 +283,6 @@ FROM Bed b
 JOIN Branch br ON br.branch_id = b.branch_id
 WHERE b.status = 'Available';
 
--- Doctor load
 CREATE VIEW vw_doctor_load AS
 SELECT 
     d.doctor_id,
@@ -308,7 +296,6 @@ LEFT JOIN Admission a
 JOIN Branch br ON br.branch_id = d.branch_id
 GROUP BY d.doctor_id, d.name, br.branch_name;
 
--- High/Critical patients
 CREATE VIEW vw_high_priority_patients AS
 SELECT 
     a.admission_id,
@@ -326,7 +313,6 @@ JOIN Branch br ON br.branch_id = a.branch_id
 WHERE p.priority_level IN ('High','Critical')
   AND a.status = 'Admitted';
 
--- Bed usage summary
 CREATE VIEW vw_bed_usage AS
 SELECT 
     br.branch_id,
@@ -339,7 +325,6 @@ FROM Branch br
 JOIN Bed b ON br.branch_id = b.branch_id
 GROUP BY br.branch_id, br.branch_name;
 
--- Full admission history
 CREATE VIEW vw_admission_history AS
 SELECT
     a.admission_id,
@@ -357,7 +342,6 @@ JOIN Doctor d ON d.doctor_id = a.doctor_id
 JOIN Bed b ON b.bed_id = a.bed_id
 JOIN Branch br ON br.branch_id = a.branch_id;
 
--- Priority distribution
 CREATE VIEW vw_priority_distribution AS
 SELECT 
     p.priority_level,
@@ -367,7 +351,6 @@ JOIN Patient p ON p.patient_id = a.patient_id
 WHERE a.status = 'Admitted'
 GROUP BY p.priority_level;
 
--- Priority per branch
 CREATE VIEW vw_priority_by_branch AS
 SELECT 
     br.branch_name,
@@ -379,7 +362,6 @@ JOIN Branch br ON br.branch_id = a.branch_id
 WHERE a.status = 'Admitted'
 GROUP BY br.branch_name, p.priority_level;
 
--- Admissions per day
 CREATE VIEW vw_admissions_per_day AS
 SELECT 
     admission_date,
@@ -388,7 +370,6 @@ FROM Admission
 GROUP BY admission_date
 ORDER BY admission_date;
 
--- Admissions per branch
 CREATE VIEW vw_admissions_by_branch AS
 SELECT 
     br.branch_name,
@@ -399,5 +380,26 @@ GROUP BY br.branch_name
 ORDER BY total_admissions DESC;
 
 -- ===================================
--- END OF CLEAN SCRIPT
+-- 5️⃣ USERS TABLE FOR LOGIN.PHP
+-- ===================================
+
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Default login:
+-- username: admin
+-- password: admin123
+
+INSERT INTO users (username, password_hash)
+VALUES (
+    'admin',
+    '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'
+);
+
+-- ===================================
+-- END OF FULL SCHEMA
 -- ===================================
