@@ -71,22 +71,26 @@ CREATE TABLE Admission (
 
 DELIMITER $$
 
+-- 1. One active admission per patient
 DROP TRIGGER IF EXISTS tr_one_active_admission_per_patient$$
 CREATE TRIGGER tr_one_active_admission_per_patient
 BEFORE INSERT ON Admission
 FOR EACH ROW
 BEGIN
     DECLARE active_count INT;
+
     SELECT COUNT(*) INTO active_count
     FROM Admission
     WHERE patient_id = NEW.patient_id
       AND status = 'Admitted';
+
     IF active_count >= 1 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Patient already has an active admission.';
     END IF;
 END$$
 
+-- 2. Branch capacity enforcement
 DROP TRIGGER IF EXISTS tr_branch_capacity$$
 CREATE TRIGGER tr_branch_capacity
 BEFORE INSERT ON Admission
@@ -109,6 +113,9 @@ BEGIN
     END IF;
 END$$
 
+-- 3. Enforce patient priority ↔ bed type rules
+-- High/Critical → must be ICU/Emergency
+-- Low/Medium    → must be Standard
 DROP TRIGGER IF EXISTS tr_priority_bed_assignment$$
 CREATE TRIGGER tr_priority_bed_assignment
 BEFORE INSERT ON Admission
@@ -117,20 +124,35 @@ BEGIN
     DECLARE patient_priority VARCHAR(20);
     DECLARE bed_type_val VARCHAR(20);
 
+    -- Get patient priority
     SELECT priority_level INTO patient_priority
-    FROM Patient WHERE patient_id = NEW.patient_id;
+    FROM Patient
+    WHERE patient_id = NEW.patient_id;
 
+    -- Get bed type
     SELECT bed_type INTO bed_type_val
-    FROM Bed WHERE bed_id = NEW.bed_id;
+    FROM Bed
+    WHERE bed_id = NEW.bed_id;
 
+    -- RULE 1: High / Critical must be ICU or Emergency
     IF patient_priority IN ('High','Critical') THEN
         IF bed_type_val NOT IN ('ICU','Emergency') THEN
             SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT='High/Critical patients must be assigned ICU/Emergency bed.';
+                SET MESSAGE_TEXT = 'High/Critical patients require ICU/Emergency beds.';
         END IF;
     END IF;
+
+    -- RULE 2: Low / Medium must be Standard beds only
+    IF patient_priority IN ('Low','Medium') THEN
+        IF bed_type_val <> 'Standard' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Low/Medium priority patients cannot use ICU/Emergency beds.';
+        END IF;
+    END IF;
+
 END$$
 
+-- 4. Bed must be available BEFORE assignment + auto-set to Occupied
 DROP TRIGGER IF EXISTS tr_bed_occupied$$
 CREATE TRIGGER tr_bed_occupied
 BEFORE INSERT ON Admission
@@ -138,7 +160,9 @@ FOR EACH ROW
 BEGIN
     DECLARE bed_status_val VARCHAR(20);
 
-    SELECT status INTO bed_status_val FROM Bed WHERE bed_id = NEW.bed_id;
+    SELECT status INTO bed_status_val
+    FROM Bed
+    WHERE bed_id = NEW.bed_id;
 
     IF bed_status_val = 'Occupied' THEN
         SIGNAL SQLSTATE '45000'
@@ -150,10 +174,12 @@ BEGIN
             SET MESSAGE_TEXT = 'Bed is under maintenance!';
     END IF;
 
-    UPDATE Bed SET status='Occupied'
+    UPDATE Bed
+    SET status='Occupied'
     WHERE bed_id = NEW.bed_id;
 END$$
 
+-- 5. Restore bed to Available after discharge
 DROP TRIGGER IF EXISTS tr_bed_available$$
 CREATE TRIGGER tr_bed_available
 AFTER UPDATE ON Admission
@@ -163,6 +189,29 @@ BEGIN
         UPDATE Bed 
         SET status='Available' 
         WHERE bed_id = NEW.bed_id;
+    END IF;
+END$$
+
+-- 6. Enforce that Admission.branch_id matches the Bed.branch_id
+DROP TRIGGER IF EXISTS tr_branch_bed_consistency$$
+CREATE TRIGGER tr_branch_bed_consistency
+BEFORE INSERT ON Admission
+FOR EACH ROW
+BEGIN
+    DECLARE bed_branch VARCHAR(10);
+
+    SELECT branch_id INTO bed_branch
+    FROM Bed
+    WHERE bed_id = NEW.bed_id;
+
+    IF bed_branch IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Bed does not exist for this admission.';
+    END IF;
+
+    IF NEW.branch_id <> bed_branch THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Admission branch_id must match the Bed branch_id.';
     END IF;
 END$$
 
@@ -197,27 +246,30 @@ BEGIN
     DECLARE bed_id_val VARCHAR(15);
     DECLARE patient_priority ENUM('Low','Medium','High','Critical');
 
-    SELECT priority_level INTO patient_priority 
-    FROM Patient WHERE patient_id=p_patient_id;
+    SELECT priority_level INTO patient_priority
+    FROM Patient
+    WHERE patient_id = p_patient_id;
 
+    -- Priority-based bed selection
     IF patient_priority IN ('High','Critical') THEN
         SELECT bed_id INTO bed_id_val
         FROM Bed
-        WHERE branch_id=p_branch_id
-          AND status='Available'
+        WHERE branch_id = p_branch_id
+          AND status = 'Available'
           AND bed_type IN ('ICU','Emergency')
         LIMIT 1;
     ELSE
         SELECT bed_id INTO bed_id_val
         FROM Bed
-        WHERE branch_id=p_branch_id
-          AND status='Available'
+        WHERE branch_id = p_branch_id
+          AND status = 'Available'
+          AND bed_type = 'Standard'
         LIMIT 1;
     END IF;
 
     IF bed_id_val IS NULL THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT='No available bed for patient priority.';
+        SET MESSAGE_TEXT = 'No available bed for patient priority in this branch.';
     END IF;
 
     INSERT INTO Admission (
